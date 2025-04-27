@@ -1,6 +1,7 @@
 from flask import Flask, Response, request
 import struct
 from orpheus_tts import OrpheusModel
+import os
 
 app = Flask(__name__)
 engine = OrpheusModel(model_name="canopylabs/orpheus-tts-0.1-finetune-prod")
@@ -32,13 +33,14 @@ def create_wav_header(sample_rate=24000, bits_per_sample=16, channels=1):
 @app.route('/tts', methods=['GET'])
 def tts():
     prompt = request.args.get('prompt', 'Hey there, looks like you forgot to provide a prompt!')
+    voice = request.args.get('voice', 'tara')
 
     def generate_audio_stream():
         yield create_wav_header()
 
         syn_tokens = engine.generate_speech(
             prompt=prompt,
-            voice="tara",
+            voice=voice,
             repetition_penalty=1.1,
             stop_token_ids=[128258],
             max_tokens=2000,
@@ -51,4 +53,5 @@ def tts():
     return Response(generate_audio_stream(), mimetype='audio/wav')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, threaded=True)
+    port = int(os.environ.get('PORT', 5005))
+    app.run(host='0.0.0.0', port=port, threaded=True)
